@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -16,6 +17,7 @@ import util.Tuple;
 import core.Connection;
 import core.DTNHost;
 import core.Message;
+import core.MessageListener;
 import core.Settings;
 import core.SimClock;
 
@@ -24,7 +26,7 @@ import core.SimClock;
  * <I>Probabilistic routing in intermittently connected networks</I> by
  * Anders Lindgren et al.
  */
-public class ProphetRouter extends ActiveRouter {
+public class BlackHoleProphetRouter extends ProphetRouter {
 	/** delivery predictability initialization constant*/
 	public static final double P_INIT = 0.75;
 	/** delivery predictability transitivity scaling constant default value */
@@ -69,7 +71,7 @@ public class ProphetRouter extends ActiveRouter {
 	 * the given Settings object.
 	 * @param s The settings object
 	 */
-	public ProphetRouter(Settings s) {
+	public BlackHoleProphetRouter(Settings s) {
 		super(s);
 		Settings prophetSettings = new Settings(PROPHET_NS);
 		secondsInTimeUnit = prophetSettings.getInt(SECONDS_IN_UNIT_S);
@@ -94,7 +96,7 @@ public class ProphetRouter extends ActiveRouter {
 	 * Copyconstructor.
 	 * @param r The router prototype where setting values are copied from
 	 */
-	protected ProphetRouter(ProphetRouter r) {
+	protected BlackHoleProphetRouter(BlackHoleProphetRouter r) {
 		super(r);
 		this.secondsInTimeUnit = r.secondsInTimeUnit;
 		this.beta = r.beta;
@@ -205,18 +207,8 @@ public class ProphetRouter extends ActiveRouter {
 	}
 
 	@Override
-	public void update() {
+	public void update() {	
 		super.update();
-		if (!canStartTransfer() ||isTransferring()) {
-			return; // nothing to transfer or is currently transferring
-		}
-
-		// try messages that could be delivered to final recipient
-		if (exchangeDeliverableMessages() != null) {
-			return;
-		}
-
-		tryOtherMessages();
 	}
 
 	/**
@@ -228,6 +220,9 @@ public class ProphetRouter extends ActiveRouter {
 		List<Tuple<Message, Connection>> messages =
 			new ArrayList<Tuple<Message, Connection>>();
 
+		
+
+		
 		Collection<Message> msgCollection = getMessageCollection();
 
 		/* for all connected hosts collect all messages that have a higher
@@ -255,6 +250,7 @@ public class ProphetRouter extends ActiveRouter {
 			return null;
 		}
 
+		
 		// sort the message-connection tuples
 		Collections.sort(messages, new TupleComparator());
 		return tryMessagesForConnected(messages);	// try to send messages
@@ -314,9 +310,52 @@ public class ProphetRouter extends ActiveRouter {
 
 	@Override
 	public MessageRouter replicate() {
-		ProphetRouter r = new ProphetRouter(this);
+		BlackHoleProphetRouter r = new BlackHoleProphetRouter(this);
 		return r;
 	}
+	
+	
+	private List <MessageListener> listeners;
+	private HashMap<String,Message> messages;
+	
+	@Override 
+	protected void addToMessages(Message m, boolean newMessage) {
+		messages = getMessages();
+		listeners = getListeners();
+		
+		this.messages.put(m.getId(),m);
+		
+		if(newMessage) {
+				for(MessageListener ml2 : this.listeners) {
+					
+					ml2.newMessage(m);
+				}
+		}else {
+			deleteMessage(m.getId(),true);
+		}
+		
+	
+		
+	System.out.println("Messages: \t" + messages + "\n");
+		
+		if(messages.get(m.getId()) != null) {
+			System.out.println("Current Message \t" + messages.get(m.getId()) + "\n");
+		}
+		else {
+			System.out.println("Successfully deleted message \t" + m.getId() + "\n" + this.getHost().getRoutingInfo().toString() + "\n");
+		}
+		
+		
+		
+	}
+	
+	
+
+	
+	
+	
+	
+	
+	
 
 }
-

@@ -62,9 +62,9 @@ public abstract class ActiveRouter extends MessageRouter {
 		this.deleteDelivered = s.getBoolean(DELETE_DELIVERED_S, false);
 
 		if (s.contains(EnergyModel.INIT_ENERGY_S)) {
-			this.energy = new EnergyModel(s);
+			this.setEnergy(new EnergyModel(s));
 		} else {
-			this.energy = null; /* no energy model */
+			this.setEnergy(null); /* no energy model */
 		}
 	}
 
@@ -76,14 +76,14 @@ public abstract class ActiveRouter extends MessageRouter {
 		super(r);
 		this.deleteDelivered = r.deleteDelivered;
 		this.policy = r.policy;
-		this.energy = (r.energy != null ? r.energy.replicate() : null);
+		this.setEnergy((r.getEnergy() != null ? r.getEnergy().replicate() : null));
 	}
 
 	@Override
 	public void init(DTNHost host, List<MessageListener> mListeners) {
 		super.init(host, mListeners);
 		this.sendingConnections = new ArrayList<Connection>(1);
-		this.lastTtlCheck = 0;
+		this.setLastTtlCheck(0);
 	}
 
 	/**
@@ -94,8 +94,8 @@ public abstract class ActiveRouter extends MessageRouter {
 	 */
 	@Override
 	public void changedConnection(Connection con) {
-		if (this.energy != null && con.isUp() && !con.isInitiator(getHost())) {
-			this.energy.reduceDiscoveryEnergy();
+		if (this.getEnergy() != null && con.isUp() && !con.isInitiator(getHost())) {
+			this.getEnergy().reduceDiscoveryEnergy();
 		}
 	}
 
@@ -147,6 +147,9 @@ public abstract class ActiveRouter extends MessageRouter {
 		 *  to zero.
 		 */
 		// check if msg was for this host and a response was requested
+		
+		
+		
 		if (m.getTo() == getHost() && m.getResponseSize() > 0) {
 			// generate a response message
 			Message res = new Message(this.getHost(),m.getFrom(),
@@ -242,7 +245,7 @@ public abstract class ActiveRouter extends MessageRouter {
 			return DENIED_TTL;
 		}
 
-		if (energy != null && energy.getEnergy() <= 0) {
+		if (getEnergy() != null && getEnergy().getEnergy() <= 0) {
 			return MessageRouter.DENIED_LOW_RESOURCES;
 		}
 
@@ -568,7 +571,7 @@ public abstract class ActiveRouter extends MessageRouter {
 	 * @return has the node energy
 	 */
 	public boolean hasEnergy() {
-		return this.energy == null || this.energy.getEnergy() > 0;
+		return this.getEnergy() == null || this.getEnergy().getEnergy() > 0;
 	}
 
 	/**
@@ -618,16 +621,16 @@ public abstract class ActiveRouter extends MessageRouter {
 		}
 
 		/* time to do a TTL check and drop old messages? Only if not sending */
-		if (SimClock.getTime() - lastTtlCheck >= TTL_CHECK_INTERVAL &&
+		if (SimClock.getTime() - getLastTtlCheck() >= TTL_CHECK_INTERVAL &&
 				sendingConnections.size() == 0) {
 			dropExpiredMessages();
-			lastTtlCheck = SimClock.getTime();
+			setLastTtlCheck(SimClock.getTime());
 		}
 
-		if (energy != null) {
+		if (getEnergy() != null) {
 			/* TODO: add support for other interfaces */
 			NetworkInterface iface = getHost().getInterface(1);
-			energy.update(iface, getHost().getComBus());
+			getEnergy().update(iface, getHost().getComBus());
 		}
 	}
 
@@ -650,11 +653,27 @@ public abstract class ActiveRouter extends MessageRouter {
 	@Override
 	public RoutingInfo getRoutingInfo() {
 		RoutingInfo top = super.getRoutingInfo();
-		if (energy != null) {
+		if (getEnergy() != null) {
 			top.addMoreInfo(new RoutingInfo("Energy level: " +
-					String.format("%.2f", energy.getEnergy())));
+					String.format("%.2f", getEnergy().getEnergy())));
 		}
 		return top;
+	}
+
+	public EnergyModel getEnergy() {
+		return energy;
+	}
+
+	public void setEnergy(EnergyModel energy) {
+		this.energy = energy;
+	}
+
+	public double getLastTtlCheck() {
+		return lastTtlCheck;
+	}
+
+	public void setLastTtlCheck(double lastTtlCheck) {
+		this.lastTtlCheck = lastTtlCheck;
 	}
 
 }

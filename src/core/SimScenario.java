@@ -10,6 +10,7 @@ import input.EventQueueHandler;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import movement.MapBasedMovement;
 import movement.MovementModel;
@@ -81,6 +82,15 @@ public class SimScenario implements Serializable {
 
 	/** package where to look for application classes */
 	private static final String APP_PACKAGE = "applications.";
+	
+	
+	private static final String BLACK_HOLES = "blackHole";
+	private static final String BlackHole_NUMBER = "numberOfBlackHoles";
+	private static final String BlackHole_ROUTER = "blackHoleRouter";
+	
+	
+	
+	
 
 	/** The world instance */
 	private World world;
@@ -117,6 +127,9 @@ public class SimScenario implements Serializable {
 	private List<UpdateListener> updateListeners;
 	/** Global application event listeners */
 	private List<ApplicationListener> appListeners;
+	
+	
+	
 
 	static {
 		DTNSim.registerForReset(SimScenario.class.getCanonicalName());
@@ -320,6 +333,36 @@ public class SimScenario implements Serializable {
 	 */
 	protected void createHosts() {
 		this.hosts = new ArrayList<DTNHost>();
+		
+		// Based From: Lee Haines (2016) SimScenario.java [Source Code] 
+		Settings customSettings = new Settings(BLACK_HOLES);
+		int nrOfBlackHoles = customSettings.getInt(BlackHole_NUMBER);
+		int rangeLow = 2,rangeHigh = 122;
+			
+        int blackHoles[] = new int[nrOfBlackHoles];
+        //BH = generate n random numbers between 0 and total number of hosts
+        Random r = new Random();
+        for(int i=0;i<nrOfBlackHoles;i++){
+           
+        	 int Result = rangeLow;//r.nextInt(rangeHigh-rangeLow) + rangeLow;
+        	 blackHoles[i] = Result;
+        	 
+        	  for(int j=0;j<i;j++){
+                if(blackHoles[j] == blackHoles[i]){
+                      //assign this i again
+                      i--;
+                      //end this inner loop now
+                     j=i;
+                  }
+        	  }     
+        	  rangeLow++;
+        }
+        System.out.println("Creating" + nrOfBlackHoles + " Black Holes at nodes: ");
+        for(int i=0;i<nrOfBlackHoles;i++){
+            System.out.print(blackHoles[i] + " ,");
+        }
+        int currentHostNumber = -1; 
+        //End of code use
 
 		for (int i=1; i<=nrofGroups; i++) {
 			List<NetworkInterface> interfaces =
@@ -393,6 +436,36 @@ public class SimScenario implements Serializable {
 			for (int j=0; j<nrofHosts; j++) {
 				ModuleCommunicationBus comBus = new ModuleCommunicationBus();
 
+				
+				// Adapted From: Lee Haines (2016) SimScenario.java [Source Code] 
+				
+				 currentHostNumber++;
+                 //specified routing protocol
+                 mRouterProto =
+                     (MessageRouter)s.createIntializedObject(ROUTING_PACKAGE +
+                     s.getSetting(ROUTER_S));
+                 //unless chosen to be a black hole
+                for(int k=0;k<nrOfBlackHoles;k++){
+                     if (blackHoles[k] == currentHostNumber){
+                         String bhRouter = customSettings.getSetting(BlackHole_ROUTER);
+                         //change protocol to be black hole
+                         mRouterProto =
+                             (MessageRouter)s.createIntializedObject(ROUTING_PACKAGE +
+                             bhRouter);
+                        // isBlackHole = true;
+                         k = nrOfBlackHoles;	//break loop
+                     }
+                 }
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
 				// prototypes are given to new DTNHost which replicates
 				// new instances of movement model and message router
 				DTNHost host = new DTNHost(this.messageListeners,

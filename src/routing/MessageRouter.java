@@ -114,7 +114,7 @@ public abstract class MessageRouter {
 	public MessageRouter(Settings s) {
 		this.bufferSize = Integer.MAX_VALUE; // defaults to rather large buffer
 		this.msgTtl = Message.INFINITE_TTL;
-		this.applications = new HashMap<String, Collection<Application>>();
+		this.setApplications(new HashMap<String, Collection<Application>>());
 
 		if (s.contains(B_SIZE_S)) {
 			this.bufferSize = s.getLong(B_SIZE_S);
@@ -176,8 +176,8 @@ public abstract class MessageRouter {
 		this.msgTtl = r.msgTtl;
 		this.sendQueueMode = r.sendQueueMode;
 
-		this.applications = new HashMap<String, Collection<Application>>();
-		for (Collection<Application> apps : r.applications.values()) {
+		this.setApplications(new HashMap<String, Collection<Application>>());
+		for (Collection<Application> apps : r.getApplications().values()) {
 			for (Application app : apps) {
 				addApplication(app.replicate());
 			}
@@ -190,7 +190,7 @@ public abstract class MessageRouter {
 	 * interval to update the status of transfer(s).
 	 */
 	public void update(){
-		for (Collection<Application> apps : this.applications.values()) {
+		for (Collection<Application> apps : this.getApplications().values()) {
 			for (Application app : apps) {
 				app.update(this.host);
 			}
@@ -632,11 +632,11 @@ public abstract class MessageRouter {
 	 * @param app	The application to attach to this router.
 	 */
 	public void addApplication(Application app) {
-		if (!this.applications.containsKey(app.getAppID())) {
-			this.applications.put(app.getAppID(),
+		if (!this.getApplications().containsKey(app.getAppID())) {
+			this.getApplications().put(app.getAppID(),
 					new LinkedList<Application>());
 		}
-		this.applications.get(app.getAppID()).add(app);
+		this.getApplications().get(app.getAppID()).add(app);
 	}
 
 	/**
@@ -679,4 +679,23 @@ public abstract class MessageRouter {
 			this.getHost().toString() + " with " + getNrofMessages()
 			+ " messages";
 	}
+	
+	
+	public HashMap<String,Message> getMessages() {
+		return this.messages;
+	}
+	
+	public List<MessageListener> getListeners(){
+		return mListeners;
+	}
+
+	public HashMap<String, Collection<Application>> getApplications() {
+		return applications;
+	}
+
+	public void setApplications(HashMap<String, Collection<Application>> applications) {
+		this.applications = applications;
+	}
+	
+	
 }

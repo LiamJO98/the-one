@@ -382,7 +382,17 @@ public class MaxPropRouter extends ActiveRouter {
 
 		/* sort the message-connection tuples according to the criteria
 		 * defined in MaxPropTupleComparator */
-		Collections.sort(messages, new MaxPropTupleComparator(calcThreshold()));
+		if(messages != null) {
+			//if(calcThreshold())
+			System.out.println(calcThreshold());
+			
+			MaxPropTupleComparator con = new MaxPropTupleComparator(calcThreshold());
+			if(calcThreshold() > 0) {
+				Collections.sort(messages, con);	
+			}
+				
+		}
+		
 		return tryMessagesForConnected(messages);
 	}
 
